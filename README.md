@@ -13,7 +13,7 @@ import "github.com/Bplotka/go-jwt"
 func main() {
     p := "some_payload"
     cl := jwt.Claims{
-        // You standard claims here...
+        // Your standard claims here...
     }
     
     b, err := jwt.NewBuilder()
