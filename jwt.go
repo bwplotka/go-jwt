@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -26,13 +27,13 @@ func genKey() (*rsa.PrivateKey, error) {
 
 // Claims specify registered claim names specified in https://tools.ietf.org/html/rfc7519#section-4.1.
 type Claims struct {
-	Issuer    string          `json:"iss,omitempty"`
-	Subject   string          `json:"sub,omitempty"`
-	Audience  []string        `json:"aud,omitempty"`
-	Expiry    jwt.NumericDate `json:"exp,omitempty"`
-	NotBefore jwt.NumericDate `json:"nbf,omitempty"`
-	IssuedAt  jwt.NumericDate `json:"iat,omitempty"`
-	ID        string          `json:"jti,omitempty"`
+	Issuer    string      `json:"iss,omitempty"`
+	Subject   string      `json:"sub,omitempty"`
+	Audience  []string    `json:"aud,omitempty"`
+	Expiry    NumericDate `json:"exp,omitempty"`
+	NotBefore NumericDate `json:"nbf,omitempty"`
+	IssuedAt  NumericDate `json:"iat,omitempty"`
+	ID        string      `json:"jti,omitempty"`
 
 	timeNow func() time.Time
 }
@@ -310,4 +311,45 @@ func (o *ObtainerWrapper) StdClaims() (Claims, error) {
 		return Claims{}, fmt.Errorf("JWT ObtainerWrapper: Could not deserialize JSON Web Token into standard claims. Err: %v", err)
 	}
 	return claims, nil
+}
+
+// NumericDate represents date and time as the number of seconds since the
+// epoch, including leap seconds. Non-integer values can be represented
+// in the serialized format, but we round to the nearest second.
+type NumericDate int64
+
+// NewNumericDate constructs NumericDate from time.Time value.
+func NewNumericDate(t time.Time) NumericDate {
+	if t.IsZero() {
+		return NumericDate(0)
+	}
+
+	// While RFC 7519 technically states that NumericDate values may be
+	// non-integer values, we don't bother serializing timestamps in
+	// claims with sub-second accuracy and just round to the nearest
+	// second instead.
+	return NumericDate(t.Unix())
+}
+
+// MarshalJSON serializes the given NumericDate into its JSON representation.
+func (n NumericDate) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatInt(int64(n), 10)), nil
+}
+
+// UnmarshalJSON reads a date from its JSON representation.
+func (n *NumericDate) UnmarshalJSON(b []byte) error {
+	s := string(b)
+
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return fmt.Errorf("Failed to unmarshall NumericDate. Err: %v", err)
+	}
+
+	*n = NumericDate(f)
+	return nil
+}
+
+// Time returns time.Time representation of NumericDate.
+func (n NumericDate) Time() time.Time {
+	return time.Unix(int64(n), 0)
 }

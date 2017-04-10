@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func stdClaims() Claims {
@@ -14,18 +13,18 @@ func stdClaims() Claims {
 	return Claims{
 		Issuer:   "me",
 		Audience: []string{"some_aud", "some_aud2"},
-		Expiry:   jwt.NewNumericDate(now.Add(20 * time.Minute)),
-		IssuedAt: jwt.NewNumericDate(now),
+		Expiry:   NewNumericDate(now.Add(20 * time.Minute)),
+		IssuedAt: NewNumericDate(now),
 		ID:       "id",
 		Subject:  "sub",
 	}
 }
 
 type TestPayload struct {
-	SomeSlice        []string   `json:"slice"`
-	SomeString       string     `json:"string"`
-	SomeInt          int        `json:"int"`
-	SomeNestedStruct Claims `json:"nested"`
+	SomeSlice        []string `json:"slice"`
+	SomeString       string   `json:"string"`
+	SomeInt          int      `json:"int"`
+	SomeNestedStruct Claims   `json:"nested"`
 }
 
 func payload() TestPayload {
