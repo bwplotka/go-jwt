@@ -16,7 +16,7 @@ import (
 
 const (
 	prvKeyBits         = 2048
-	signatureAlgorithm = jose.PS512
+	signatureAlgorithm = jose.RS512
 	keyAlgorithm       = jose.RSA_OAEP
 	contentAlgorithm   = jose.A128GCM
 )
