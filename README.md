@@ -7,7 +7,7 @@ Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+J
 
 ```go
 	p := "some_payload"
-	cl := jwt.Claims{
+	cl := Claims{
 	    // You standard claims here...
 	}
 
@@ -24,7 +24,7 @@ Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+J
         // Handle error here..
     }
     
-    // Generated valid nested JWT in token variable!
+    // Generated valid nested JWT in `token` variable!
     
 	obtainer := b.FromSignedAndEncryptedJWT(token)
 
@@ -34,13 +34,13 @@ Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+J
         // Handle error here..
     }
 
-	// fetched == "some_payload" again!
+	// We have "some_payload" again in `fetched` variable.
 
 	fetchedStdClaims, err := obtainer.StdClaims()
 	if err != nil {
         // Handle error here..
     }
    
-    // Have our standard claims again in fetchedStdClaims variable.
+    // We have our standard claims again in `fetchedStdClaims` variable.
     
 ```

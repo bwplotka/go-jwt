@@ -9,9 +9,9 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-func stdClaims() jwt.Claims {
+func stdClaims() Claims {
 	now := time.Now()
-	return jwt.Claims{
+	return Claims{
 		Issuer:   "me",
 		Audience: []string{"some_aud", "some_aud2"},
 		Expiry:   jwt.NewNumericDate(now.Add(20 * time.Minute)),
@@ -25,7 +25,7 @@ type TestPayload struct {
 	SomeSlice        []string   `json:"slice"`
 	SomeString       string     `json:"string"`
 	SomeInt          int        `json:"int"`
-	SomeNestedStruct jwt.Claims `json:"nested"`
+	SomeNestedStruct Claims `json:"nested"`
 }
 
 func payload() TestPayload {
@@ -96,7 +96,7 @@ func TestBuilder_NestedJWTSerializeObtain_OK(t *testing.T) {
 	assert.EqualValues(t, p, fetched)
 
 	// Test std claims from Claims() method.
-	var fetchedCl jwt.Claims
+	var fetchedCl Claims
 	err = obtainer.Claims(&fetchedCl)
 	require.NoError(t, err)
 
@@ -158,7 +158,7 @@ func TestBuilder_JWESerializeObtain_OK(t *testing.T) {
 	assert.EqualValues(t, p, fetched)
 
 	// Test std claims from Claims() method.
-	var fetchedCl jwt.Claims
+	var fetchedCl Claims
 	err = obtainer.Claims(&fetchedCl)
 	require.NoError(t, err)
 
@@ -222,7 +222,7 @@ func TestBuilder_JWSSerializeObtain_OK(t *testing.T) {
 	assert.EqualValues(t, p, fetched)
 
 	// Test std claims from Claims() method.
-	var fetchedCl jwt.Claims
+	var fetchedCl Claims
 	err = obtainer.Claims(&fetchedCl)
 	require.NoError(t, err)
 

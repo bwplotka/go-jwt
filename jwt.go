@@ -24,6 +24,74 @@ func genKey() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, prvKeyBits)
 }
 
+// Claims specify registered claim names specified in https://tools.ietf.org/html/rfc7519#section-4.1.
+type Claims struct {
+	Issuer    string          `json:"iss,omitempty"`
+	Subject   string          `json:"sub,omitempty"`
+	Audience  []string        `json:"aud,omitempty"`
+	Expiry    jwt.NumericDate `json:"exp,omitempty"`
+	NotBefore jwt.NumericDate `json:"nbf,omitempty"`
+	IssuedAt  jwt.NumericDate `json:"iat,omitempty"`
+	ID        string          `json:"jti,omitempty"`
+
+	timeNow func() time.Time
+}
+
+// ValidateWithLeeway checks claims in a token against expected values. A custom leeway may be specified for comparing
+// time values. You may pass a zero value to check time values with no leeway, but you should note that numeric date
+// values are rounded to the nearest second and sub-second precision is not supported.
+func (c Claims) ValidateWithLeeway(e Claims, leeway time.Duration) error {
+	if e.Issuer != "" && e.Issuer != c.Issuer {
+		return fmt.Errorf("Invalid issuer. Expected: %q, got: %q", e.Issuer, c.Issuer)
+	}
+
+	if e.Subject != "" && e.Subject != c.Subject {
+		return fmt.Errorf("Invalid subject. Expected: %q, got: %q", e.Subject, c.Subject)
+	}
+
+	if e.ID != "" && e.ID != c.ID {
+		return fmt.Errorf("Invalid ID. Expected: %q, got: %q", e.ID, c.ID)
+	}
+
+	if len(e.Audience) != 0 {
+		if len(e.Audience) != len(c.Audience) {
+			return fmt.Errorf("Invalid Audience. Expected len: %d, got: %d", len(e.Audience), len(c.Audience))
+		}
+
+		audienceLookup := map[string]struct{}{}
+		for _, v := range c.Audience {
+			audienceLookup[v] = struct{}{}
+		}
+
+		for _, v := range e.Audience {
+			if _, ok := audienceLookup[v]; !ok {
+				return fmt.Errorf("Invalid Audience. Expected: %q and  not found.", v)
+			}
+		}
+
+	}
+
+	if c.timeNow == nil {
+		c.timeNow = time.Now
+	}
+
+	now := c.timeNow()
+	if now.IsZero() {
+		return nil
+	}
+
+	if now.Add(leeway).Before(c.NotBefore.Time()) {
+		return fmt.Errorf("Violated NotBefore. It is before specified time %q", c.NotBefore.Time().String())
+	}
+
+	if now.Add(-leeway).After(c.Expiry.Time()) {
+		return fmt.Errorf("Exipred claim. Expiration time %q", c.Expiry.Time())
+
+	}
+
+	return nil
+}
+
 // jwtPayload defines special claim custom payload.
 // Needed to avoid collisions. https://tools.ietf.org/html/rfc7519#section-4.2
 type jwtPayload struct {
@@ -146,20 +214,15 @@ func (j *SignedObtainer) FromJWS(token string) *ObtainerWrapper {
 }
 
 // VerifyClaims verifies standard "iss", "sub", "aud", "exp" claims from JWT RFC (https://tools.ietf.org/html/rfc7519).
-func (j *SignedObtainer) VerifyStdClaims(claims jwt.Claims, expected jwt.Claims) error {
-	err := claims.ValidateWithLeeway(jwt.Expected{
-		Subject:  expected.Subject,
-		ID:       expected.ID,
-		Audience: expected.Audience,
-		Issuer:   expected.Issuer,
-		Time:     j.timeNow(),
-	}, 1*time.Second)
+func (j *SignedObtainer) VerifyStdClaims(claims Claims, expected Claims) error {
+	err := claims.ValidateWithLeeway(expected, 1*time.Second)
 	if err != nil {
 		return fmt.Errorf("JWT Builder: claims validation failed. Err: %v", err)
 	}
 	return nil
 }
 
+// BuilderWrapper wraps specified engine and enabling packing and serializing claims into single token.
 type BuilderWrapper struct {
 	engine interface{}
 }
@@ -171,9 +234,8 @@ func (b *BuilderWrapper) Claims(claims interface{}) *BuilderWrapper {
 	case jwt.Builder:
 		b.engine = builder.Claims(claims)
 	case jwt.NestedBuilder:
-		b.engine =  builder.Claims(claims)
+		b.engine = builder.Claims(claims)
 	}
-
 	return b
 }
 
@@ -193,7 +255,6 @@ func (b *BuilderWrapper) Payload(payload interface{}) *BuilderWrapper {
 			},
 		)
 	}
-
 	return b
 }
 
@@ -207,6 +268,7 @@ func (b *BuilderWrapper) CompactSerialize() (string, error) {
 	return "", errors.New("JWT BuildWrapper internal error: Wrong type of wrapped engine.")
 }
 
+// ObtainerWrapper wraps token and enables deserialization from token.
 type ObtainerWrapper struct {
 	err         error
 	parsedToken *jwt.JSONWebToken
@@ -238,14 +300,14 @@ func (o *ObtainerWrapper) Payload(out interface{}) error {
 	return nil
 }
 
-func (o *ObtainerWrapper) StdClaims() (jwt.Claims, error) {
+func (o *ObtainerWrapper) StdClaims() (Claims, error) {
 	if o.err != nil {
-		return jwt.Claims{}, o.err
+		return Claims{}, o.err
 	}
-	var claims jwt.Claims
+	var claims Claims
 	err := o.parsedToken.Claims(o.key, &claims)
 	if err != nil {
-		return jwt.Claims{}, fmt.Errorf("JWT ObtainerWrapper: Could not deserialize JSON Web Token into standard claims. Err: %v", err)
+		return Claims{}, fmt.Errorf("JWT ObtainerWrapper: Could not deserialize JSON Web Token into standard claims. Err: %v", err)
 	}
 	return claims, nil
 }
