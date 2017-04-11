@@ -69,7 +69,6 @@ func (c Claims) ValidateWithLeeway(e Claims, leeway time.Duration) error {
 				return fmt.Errorf("Invalid Audience. Expected: %q and  not found.", v)
 			}
 		}
-
 	}
 
 	if c.timeNow == nil {
@@ -202,6 +201,17 @@ func NewSignedObtainer(publicKey *rsa.PublicKey) *SignedObtainer {
 		timeNow: time.Now,
 	}
 }
+
+func (j *SignedObtainer) PublicRSAKey() rsa.PublicKey {
+	return *j.pubKey
+}
+
+func (j *SignedObtainer) PublicJWK() jose.JSONWebKey {
+	return jose.JSONWebKey{
+		Key: j.pubKey,
+	}
+}
+
 
 // FromJWS parses given JWS.
 // Returned ObtainerWrapper can be used to fetch claims. Signature verification is done by ObtainerWrapper.
