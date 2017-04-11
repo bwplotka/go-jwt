@@ -191,7 +191,6 @@ func (j *Builder) FromJWE(token string) *ObtainerWrapper {
 
 type SignedObtainer struct {
 	pubKey *rsa.PublicKey
-
 	timeNow func() time.Time
 }
 
