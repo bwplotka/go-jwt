@@ -1,7 +1,6 @@
 # go-jwt
 
-[![Build Status](https://travis-ci.org/Bplotka/go-jwt.svg?branch=master)](https://travis-ci.org/Bplotka/go-jwt) 
-<!---[![Go Report Card](https://goreportcard.com/badge/github.com/Bplotka/go-jwt)](https://goreportcard.com/report/github.com/Bplotka/go-jwt) -->
+[![Build Status](https://travis-ci.org/Bplotka/go-jwt.svg?branch=master)](https://travis-ci.org/Bplotka/go-jwt) [![Go Report Card](https://goreportcard.com/badge/github.com/Bplotka/go-jwt)](https://goreportcard.com/report/github.com/Bplotka/go-jwt)
 
 Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+JWE)
 
