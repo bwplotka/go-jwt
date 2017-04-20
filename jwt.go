@@ -1,5 +1,3 @@
-// Copyright (c) Improbable Worlds Ltd, All Rights Reserved
-
 // Wrapper over jose utilities that implements JSON Web Signature (JWS) and JSON Web Encryption (JWE).
 
 package jwt
@@ -17,10 +15,11 @@ import (
 )
 
 const (
-	prvKeyBits         = 2048
-	signatureAlgorithm = jose.RS512
-	keyAlgorithm       = jose.RSA_OAEP
-	contentAlgorithm   = jose.A128GCM
+	prvKeyBits = 2048
+
+	defaultSignatureAlgorithm = jose.RS256
+	defaultKeyAlgorithm       = jose.RSA_OAEP
+	defaultContentAlgorithm   = jose.A128GCM
 )
 
 func genKey() (*rsa.PrivateKey, error) {
@@ -117,8 +116,18 @@ type Builder struct {
 	encrypter jose.Encrypter
 }
 
-// NewBuilder constructs new Builder that is able to constructs and reads all types of JSON Web tokens.
-func NewBuilder() (*Builder, error) {
+// NewDefaultBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
+// Uses default signature, key and content algorithms.
+func NewDefaultBuilder() (*Builder, error) {
+	return NewBuilder(defaultSignatureAlgorithm, defaultKeyAlgorithm, defaultContentAlgorithm)
+}
+
+// NewBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
+func NewBuilder(
+	signatureAlgorithm jose.SignatureAlgorithm,
+	keyAlgorithm jose.KeyAlgorithm,
+	contentAlgorithm jose.ContentEncryption,
+) (*Builder, error) {
 	prvKey, err := genKey()
 	if err != nil {
 		return nil, fmt.Errorf("JWT Builder: Could not generate RSA key. Err: %v", err)

@@ -46,7 +46,7 @@ func TestBuilder_ExampleSerializeObtain_OK(t *testing.T) {
 	p := "some_payload"
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.SignedAndEncryptedJWT().
@@ -76,7 +76,7 @@ func TestBuilder_NestedJWTSerializeObtain_OK(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.SignedAndEncryptedJWT().
@@ -114,7 +114,7 @@ func TestBuilder_NestedJWTSerializeObtain_DifferentKeys(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.SignedAndEncryptedJWT().
@@ -123,7 +123,7 @@ func TestBuilder_NestedJWTSerializeObtain_DifferentKeys(t *testing.T) {
 		CompactSerialize()
 	require.NoError(t, err)
 
-	yetAnotherBuilder, err := NewBuilder()
+	yetAnotherBuilder, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	fetched := TestPayload{}
@@ -138,7 +138,7 @@ func TestBuilder_JWESerializeObtain_OK(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.JWE().
@@ -176,7 +176,7 @@ func TestBuilder_JWESerializeObtain_DifferentKeys(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.JWE().
@@ -185,7 +185,7 @@ func TestBuilder_JWESerializeObtain_DifferentKeys(t *testing.T) {
 		CompactSerialize()
 	require.NoError(t, err)
 
-	yetAnotherBuilder, err := NewBuilder()
+	yetAnotherBuilder, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	fetched := TestPayload{}
@@ -200,7 +200,7 @@ func TestBuilder_JWSSerializeObtain_OK(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.JWS().
@@ -240,7 +240,7 @@ func TestBuilder_JWSSerializeObtain_DifferentKeys(t *testing.T) {
 	p := payload()
 	cl := stdClaims()
 
-	b, err := NewBuilder()
+	b, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	token, err := b.JWS().
@@ -249,7 +249,7 @@ func TestBuilder_JWSSerializeObtain_DifferentKeys(t *testing.T) {
 		CompactSerialize()
 	require.NoError(t, err)
 
-	yetAnotherBuilder, err := NewBuilder()
+	yetAnotherBuilder, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
 	signedObtainer := NewSignedObtainer(&yetAnotherBuilder.prvKey.PublicKey)
