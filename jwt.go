@@ -20,6 +20,10 @@ const (
 	defaultSignatureAlgorithm = jose.RS256
 	defaultKeyAlgorithm       = jose.RSA_OAEP
 	defaultContentAlgorithm   = jose.A128GCM
+
+	// See https://tools.ietf.org/html/draft-ietf-jose-json-web-key-41#section-4.2
+	signatureJWKUse  = "sig"
+	encryptionJWKUse = "enc"
 )
 
 func genKey() (*rsa.PrivateKey, error) {
@@ -158,7 +162,7 @@ func NewBuilder(
 	}
 
 	return &Builder{
-		SignedObtainer: NewSignedObtainer(&prvKey.PublicKey),
+		SignedObtainer: NewSignedObtainer(&prvKey.PublicKey, signatureAlgorithm),
 		prvKey:         prvKey,
 		signer:         signer,
 		encrypter:      encrypter,
@@ -209,15 +213,18 @@ func (j *Builder) FromJWE(token string) *ObtainerWrapper {
 
 // SignedObtainer is struct that is able only to parse not encrypted JSON Web tokens.
 type SignedObtainer struct {
-	pubKey  *rsa.PublicKey
+	pubKey             *rsa.PublicKey
+	signatureAlgorithm jose.SignatureAlgorithm
+
 	timeNow func() time.Time
 }
 
 // NewSignedObtainer constructs SignedObtainer.
-func NewSignedObtainer(publicKey *rsa.PublicKey) *SignedObtainer {
+func NewSignedObtainer(publicKey *rsa.PublicKey, signatureAlgorithm jose.SignatureAlgorithm) *SignedObtainer {
 	return &SignedObtainer{
-		pubKey:  publicKey,
-		timeNow: time.Now,
+		pubKey:             publicKey,
+		signatureAlgorithm: signatureAlgorithm,
+		timeNow:            time.Now,
 	}
 }
 
@@ -229,7 +236,9 @@ func (j *SignedObtainer) PublicRSAKey() rsa.PublicKey {
 // PublicJWK gets Public RSA key wrapped in JSON Web Key used by this Obtainer.
 func (j *SignedObtainer) PublicJWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
-		Key: j.pubKey,
+		Key:       j.pubKey,
+		Use:       signatureJWKUse,
+		Algorithm: string(j.signatureAlgorithm),
 	}
 }
 
