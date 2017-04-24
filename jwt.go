@@ -117,22 +117,23 @@ type Builder struct {
 }
 
 // NewDefaultBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
-// Uses default signature, key and content algorithms.
+// Uses default signature, key and content algorithms. Private key is auto-generated.
 func NewDefaultBuilder() (*Builder, error) {
-	return NewBuilder(defaultSignatureAlgorithm, defaultKeyAlgorithm, defaultContentAlgorithm)
-}
-
-// NewBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
-func NewBuilder(
-	signatureAlgorithm jose.SignatureAlgorithm,
-	keyAlgorithm jose.KeyAlgorithm,
-	contentAlgorithm jose.ContentEncryption,
-) (*Builder, error) {
 	prvKey, err := genKey()
 	if err != nil {
 		return nil, fmt.Errorf("JWT Builder: Could not generate RSA key. Err: %v", err)
 	}
 
+	return NewBuilder(prvKey, defaultSignatureAlgorithm, defaultKeyAlgorithm, defaultContentAlgorithm)
+}
+
+// NewBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
+func NewBuilder(
+	prvKey *rsa.PrivateKey,
+	signatureAlgorithm jose.SignatureAlgorithm,
+	keyAlgorithm jose.KeyAlgorithm,
+	contentAlgorithm jose.ContentEncryption,
+) (*Builder, error) {
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: signatureAlgorithm,
