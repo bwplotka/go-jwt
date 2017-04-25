@@ -236,7 +236,9 @@ func (j *SignedObtainer) PublicRSAKey() rsa.PublicKey {
 // PublicJWK gets Public RSA key wrapped in JSON Web Key used by this Obtainer.
 func (j *SignedObtainer) PublicJWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
-		Key:       j.pubKey,
+		Key:   j.pubKey,
+		KeyID: "1",
+		// Use parameter value is REQUIRED for all keys in the referenced JWK Set to indicate each key's intended usage.
 		Use:       signatureJWKUse,
 		Algorithm: string(j.signatureAlgorithm),
 	}
