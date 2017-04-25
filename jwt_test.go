@@ -334,9 +334,7 @@ func TestBuilder_JWS_ValidHeaders(t *testing.T) {
 	header, err := parseHeader(token)
 	require.NoError(t, err)
 
-	assert.Len(t, header, 4)
-	assert.Equal(t, "JWT", header["cty"])
-	assert.Equal(t, "JWT", header["typ"])
+	assert.Len(t, header, 2)
 	assert.Equal(t, string(defaultSignatureAlgorithm), header["alg"])
 	assert.True(t, header["kid"] != "")
 }

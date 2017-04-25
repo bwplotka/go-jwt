@@ -21,8 +21,8 @@ const (
 
 	defaultSignatureAlgorithm = jose.RS256
 	// See https://tools.ietf.org/html/rfc3447
-	defaultKeyAlgorithm       = jose.RSA_OAEP
-	defaultContentAlgorithm   = jose.A128GCM
+	defaultKeyAlgorithm     = jose.RSA_OAEP
+	defaultContentAlgorithm = jose.A128GCM
 
 	// See https://tools.ietf.org/html/draft-ietf-jose-json-web-key-41#section-4.2
 	signatureJWKUse  = "sig"
@@ -153,7 +153,8 @@ func NewBuilder(
 			Algorithm: signatureAlgorithm,
 			Key:       prvSigJWK,
 		},
-		(&jose.SignerOptions{}).WithType("JWT").WithContentType("JWT"),
+		nil,
+	// TODO: Consider: (&jose.SignerOptions{}).WithType("JWT").WithContentType("JWT")
 	)
 	if err != nil {
 		return nil, fmt.Errorf("JWT Builder: Could not build signer. Err: %v", err)
@@ -413,6 +414,7 @@ func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
 	if use != signatureJWKUse {
 		extra = "-e"
 	}
+
 	return &jose.JSONWebKey{
 		Use:       use,
 		KeyID:     hash(key.N.Bytes()) + extra,
