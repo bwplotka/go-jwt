@@ -140,7 +140,7 @@ func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
 	}
 	return &jose.JSONWebKey{
 		Use:       use,
-		KeyID:     hash(base64.RawURLEncoding.EncodeToString(key.N.Bytes())) + extra,
+		KeyID:     hash(key.N.Bytes()) + extra,
 		Algorithm: algo,
 		Key:       key,
 	}
@@ -154,7 +154,7 @@ func newPrvJWK(key *rsa.PrivateKey, algo string, use string) *jose.JSONWebKey {
 	return &jose.JSONWebKey{
 		Use: use,
 		// KeyID is always hash from PublicKey.
-		KeyID:     hash(base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes())) + extra,
+		KeyID:     hash(key.PublicKey.N.Bytes()) + extra,
 		Algorithm: algo,
 		Key:       key,
 	}
@@ -428,8 +428,8 @@ func (n NumericDate) Time() time.Time {
 	return time.Unix(int64(n), 0)
 }
 
-func hash(str string) string {
+func hash(b []byte) string {
 	h := sha256.New()
-	h.Write([]byte(str))
-	return string(h.Sum(nil))
+	h.Write(b)
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
