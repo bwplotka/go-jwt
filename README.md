@@ -1,7 +1,6 @@
 # go-jwt
 
-[![Build Status](https://travis-ci.org/Bplotka/go-jwt.svg?branch=master)](https://travis-ci.org/Bplotka/go-jwt) [![Go Report Card](https://goreportcard.com/badge/github.com/Bplotka/go-jwt)](https://goreportcard.com/report/github.com/Bplotka/go-jwt)
-
+[![Build Status](https://travis-ci.org/Bplotka/go-jwt.svg?branch=master)](https://travis-ci.org/Bplotka/go-jwt) [![Go Report Card](https://goreportcard.com/badge/github.com/Bplotka/go-jwt)](https://goreportcard.com/report/github.com/Bplotka/go-jwt) [![JWT Compatible](https://jwt.io/assets/badge-compatible.svg)](https://jwt.io)
 Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+JWE)
 
 It wraps and is inspired by [gopkg.in/square/go-jose.v2](https://github.com/square/go-jose/tree/v2.1.0) (especially `jwt` subpackage)
@@ -11,7 +10,10 @@ It wraps and is inspired by [gopkg.in/square/go-jose.v2](https://github.com/squa
 ```go
 package main
 
-import "github.com/Bplotka/go-jwt"
+import (
+    "fmt"
+    "github.com/Bplotka/go-jwt"
+)
 
 func main() {
     p := "some_payload"
@@ -19,9 +21,9 @@ func main() {
         // Your standard claims here...
     }
     
-    b, err := jwt.NewBuilder()
+    b, err := jwt.NewDefaultBuilder() // or jwt.NewBuilder(rsaPrvKey, signAlg, keyAlg, contentAlg)
     if err != nil {
-        // Handle error here..
+        // Handle error here...
     }
     
     token, err := b.SignedAndEncryptedJWT().
@@ -29,11 +31,13 @@ func main() {
         Payload(p).
         CompactSerialize()
     if err != nil {
-        // Handle error here..
+        // Handle error here...
     }
     
     // Generated valid nested JWT in `token` variable!
-    
+    // (....)
+    // Let's revert the process:
+     
     obtainer := b.FromSignedAndEncryptedJWT(token)
     
     var fetched string
@@ -50,7 +54,8 @@ func main() {
     }
     
     // We have our standard claims again in `fetchedStdClaims` variable.
+    fmt.Println(fetchedStdClaims.Issuer)
+    fmt.Println(fetchedStdClaims.Subject)
+    // ...
 }
-
-
 ```

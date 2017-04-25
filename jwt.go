@@ -20,6 +20,7 @@ const (
 	prvKeyBits = 2048
 
 	defaultSignatureAlgorithm = jose.RS256
+	// See https://tools.ietf.org/html/rfc3447
 	defaultKeyAlgorithm       = jose.RSA_OAEP
 	defaultContentAlgorithm   = jose.A128GCM
 
@@ -112,6 +113,12 @@ type jwtPayload struct {
 // Builder is an builder that is able to construct nested JWT or JWS with custom payload claim or other claims.
 // (Nested JSON Web Token is token that is signed and encrypted respectively).
 // For each instance separate private RSA key is assigned, which is used to constructs and obtain all tokens.
+// All JWT generated from builder will have headers in form of:
+// 	cty: JWT
+// 	typ: JWT
+// 	alg: algorithm used for signing or key management.
+//	enc: algorithm used for encryption if encryption was used.
+// 	kid: hash of key used.
 type Builder struct {
 	*SignedObtainer
 
@@ -133,33 +140,6 @@ func NewDefaultBuilder() (*Builder, error) {
 	return NewBuilder(prvKey, defaultSignatureAlgorithm, defaultKeyAlgorithm, defaultContentAlgorithm)
 }
 
-func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
-	extra := "-s"
-	if use != signatureJWKUse {
-		extra = "-e"
-	}
-	return &jose.JSONWebKey{
-		Use:       use,
-		KeyID:     hash(key.N.Bytes()) + extra,
-		Algorithm: algo,
-		Key:       key,
-	}
-}
-
-func newPrvJWK(key *rsa.PrivateKey, algo string, use string) *jose.JSONWebKey {
-	extra := "-s"
-	if use != signatureJWKUse {
-		extra = "-e"
-	}
-	return &jose.JSONWebKey{
-		Use: use,
-		// KeyID is always hash from PublicKey.
-		KeyID:     hash(key.PublicKey.N.Bytes()) + extra,
-		Algorithm: algo,
-		Key:       key,
-	}
-}
-
 // NewBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
 func NewBuilder(
 	prvKey *rsa.PrivateKey,
@@ -173,7 +153,7 @@ func NewBuilder(
 			Algorithm: signatureAlgorithm,
 			Key:       prvSigJWK,
 		},
-		nil,
+		(&jose.SignerOptions{}).WithType("JWT").WithContentType("JWT"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("JWT Builder: Could not build signer. Err: %v", err)
@@ -183,7 +163,7 @@ func NewBuilder(
 		contentAlgorithm,
 		jose.Recipient{
 			Algorithm: keyAlgorithm,
-			Key:       &prvKey.PublicKey,
+			Key:       newPubJWK(&prvKey.PublicKey, string(keyAlgorithm), encryptionJWKUse),
 		},
 		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"),
 	)
@@ -426,6 +406,33 @@ func (n *NumericDate) UnmarshalJSON(b []byte) error {
 // Time returns time.Time representation of NumericDate.
 func (n NumericDate) Time() time.Time {
 	return time.Unix(int64(n), 0)
+}
+
+func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
+	extra := "-s"
+	if use != signatureJWKUse {
+		extra = "-e"
+	}
+	return &jose.JSONWebKey{
+		Use:       use,
+		KeyID:     hash(key.N.Bytes()) + extra,
+		Algorithm: algo,
+		Key:       key,
+	}
+}
+
+func newPrvJWK(key *rsa.PrivateKey, algo string, use string) *jose.JSONWebKey {
+	extra := "-s"
+	if use != signatureJWKUse {
+		extra = "-e"
+	}
+	return &jose.JSONWebKey{
+		Use: use,
+		// KeyID is always hash from PublicKey.
+		KeyID:     hash(key.PublicKey.N.Bytes()) + extra,
+		Algorithm: algo,
+		Key:       key,
+	}
 }
 
 func hash(b []byte) string {

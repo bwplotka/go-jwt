@@ -1,6 +1,10 @@
 package jwt
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -217,8 +221,6 @@ func TestBuilder_JWSSerializeObtain_OK(t *testing.T) {
 		),
 	)
 
-	// TODO: first if first part is in form of {kid:<>, alg:<>}
-
 	obtainer := signedObtainer.FromJWS(token)
 
 	// Test payload.
@@ -295,4 +297,70 @@ func TestSignedObtainer_ValidJWK(t *testing.T) {
 	jwkFromObtainer := signedObtainer.PublicJWK()
 
 	assert.EqualValues(t, jwk, jwkFromObtainer)
+}
+
+func parseHeader(token string) (map[string]string, error) {
+	t := strings.Split(token, ".")
+	if len(t) < 3 {
+		return nil, fmt.Errorf("String %q does not have 3 components.", token)
+	}
+
+	decoded, err := base64.RawURLEncoding.DecodeString(t[0])
+	if err != nil {
+		return nil, err
+	}
+
+	header := map[string]string{}
+	err = json.Unmarshal(decoded, &header)
+	if err != nil {
+		return nil, err
+	}
+	return header, nil
+}
+
+func TestBuilder_JWS_ValidHeaders(t *testing.T) {
+	p := payload()
+	cl := stdClaims()
+
+	b, err := NewDefaultBuilder()
+	require.NoError(t, err)
+
+	token, err := b.JWS().
+		Claims(cl).
+		Payload(p).
+		CompactSerialize()
+	require.NoError(t, err)
+
+	header, err := parseHeader(token)
+	require.NoError(t, err)
+
+	assert.Len(t, header, 4)
+	assert.Equal(t, "JWT", header["cty"])
+	assert.Equal(t, "JWT", header["typ"])
+	assert.Equal(t, string(defaultSignatureAlgorithm), header["alg"])
+	assert.True(t, header["kid"] != "")
+}
+
+func TestBuilder_JWE_ValidHeaders(t *testing.T) {
+	p := payload()
+	cl := stdClaims()
+
+	b, err := NewDefaultBuilder()
+	require.NoError(t, err)
+
+	token, err := b.JWE().
+		Claims(cl).
+		Payload(p).
+		CompactSerialize()
+	require.NoError(t, err)
+
+	header, err := parseHeader(token)
+	require.NoError(t, err)
+
+	assert.Len(t, header, 5)
+	assert.Equal(t, "JWT", header["cty"])
+	assert.Equal(t, "JWT", header["typ"])
+	assert.Equal(t, string(defaultKeyAlgorithm), header["alg"])
+	assert.Equal(t, string(defaultContentAlgorithm), header["enc"])
+	assert.True(t, header["kid"] != "")
 }
