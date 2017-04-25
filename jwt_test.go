@@ -283,6 +283,7 @@ func TestSignedObtainer_ValidJWK(t *testing.T) {
 	jwk := b.PublicJWK()
 	assert.Equal(t, jwk.Algorithm, string(defaultSignatureAlgorithm))
 	assert.Equal(t, jwk.Use, signatureJWKUse)
+	assert.True(t, jwk.KeyID != "")
 
 	signedObtainer := NewSignedObtainer(
 		newPubJWK(
