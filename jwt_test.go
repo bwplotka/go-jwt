@@ -209,7 +209,15 @@ func TestBuilder_JWSSerializeObtain_OK(t *testing.T) {
 		CompactSerialize()
 	require.NoError(t, err)
 
-	signedObtainer := NewSignedObtainer(&b.prvKey.PublicKey, defaultSignatureAlgorithm)
+	signedObtainer := NewSignedObtainer(
+		newPubJWK(
+			&b.prvKey.PublicKey,
+			string(defaultSignatureAlgorithm),
+			signatureJWKUse,
+		),
+	)
+
+	// TODO: first if first part is in form of {kid:<>, alg:<>}
 
 	obtainer := signedObtainer.FromJWS(token)
 
@@ -252,7 +260,13 @@ func TestBuilder_JWSSerializeObtain_DifferentKeys(t *testing.T) {
 	yetAnotherBuilder, err := NewDefaultBuilder()
 	require.NoError(t, err)
 
-	signedObtainer := NewSignedObtainer(&yetAnotherBuilder.prvKey.PublicKey, defaultSignatureAlgorithm)
+	signedObtainer := NewSignedObtainer(
+		newPubJWK(
+			&yetAnotherBuilder.prvKey.PublicKey,
+			string(defaultSignatureAlgorithm),
+			signatureJWKUse,
+		),
+	)
 
 	fetched := TestPayload{}
 	obtainer := signedObtainer.FromJWS(token)
@@ -270,7 +284,13 @@ func TestSignedObtainer_ValidJWK(t *testing.T) {
 	assert.Equal(t, jwk.Algorithm, string(defaultSignatureAlgorithm))
 	assert.Equal(t, jwk.Use, signatureJWKUse)
 
-	signedObtainer := NewSignedObtainer(&b.prvKey.PublicKey, defaultSignatureAlgorithm)
+	signedObtainer := NewSignedObtainer(
+		newPubJWK(
+			&b.prvKey.PublicKey,
+			string(defaultSignatureAlgorithm),
+			signatureJWKUse,
+		),
+	)
 	jwkFromObtainer := signedObtainer.PublicJWK()
 
 	assert.EqualValues(t, jwk, jwkFromObtainer)

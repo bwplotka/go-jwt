@@ -5,6 +5,8 @@ package jwt
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -131,6 +133,33 @@ func NewDefaultBuilder() (*Builder, error) {
 	return NewBuilder(prvKey, defaultSignatureAlgorithm, defaultKeyAlgorithm, defaultContentAlgorithm)
 }
 
+func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
+	extra := "-s"
+	if use != signatureJWKUse {
+		extra = "-e"
+	}
+	return &jose.JSONWebKey{
+		Use:       use,
+		KeyID:     hash(base64.RawURLEncoding.EncodeToString(key.N.Bytes())) + extra,
+		Algorithm: algo,
+		Key:       key,
+	}
+}
+
+func newPrvJWK(key *rsa.PrivateKey, algo string, use string) *jose.JSONWebKey {
+	extra := "-s"
+	if use != signatureJWKUse {
+		extra = "-e"
+	}
+	return &jose.JSONWebKey{
+		Use: use,
+		// KeyID is always hash from PublicKey.
+		KeyID:     hash(base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes())) + extra,
+		Algorithm: algo,
+		Key:       key,
+	}
+}
+
 // NewBuilder constructs new Builder that is able to construct and read all types of JSON Web tokens.
 func NewBuilder(
 	prvKey *rsa.PrivateKey,
@@ -138,10 +167,11 @@ func NewBuilder(
 	keyAlgorithm jose.KeyAlgorithm,
 	contentAlgorithm jose.ContentEncryption,
 ) (*Builder, error) {
+	prvSigJWK := newPrvJWK(prvKey, string(signatureAlgorithm), signatureJWKUse)
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: signatureAlgorithm,
-			Key:       prvKey,
+			Key:       prvSigJWK,
 		},
 		nil,
 	)
@@ -162,10 +192,12 @@ func NewBuilder(
 	}
 
 	return &Builder{
-		SignedObtainer: NewSignedObtainer(&prvKey.PublicKey, signatureAlgorithm),
-		prvKey:         prvKey,
-		signer:         signer,
-		encrypter:      encrypter,
+		SignedObtainer: NewSignedObtainer(
+			newPubJWK(&prvKey.PublicKey, string(signatureAlgorithm), signatureJWKUse),
+		),
+		prvKey:    prvKey,
+		signer:    signer,
+		encrypter: encrypter,
 	}, nil
 }
 
@@ -213,35 +245,27 @@ func (j *Builder) FromJWE(token string) *ObtainerWrapper {
 
 // SignedObtainer is struct that is able only to parse not encrypted JSON Web tokens.
 type SignedObtainer struct {
-	pubKey             *rsa.PublicKey
-	signatureAlgorithm jose.SignatureAlgorithm
+	pubKey *jose.JSONWebKey
 
 	timeNow func() time.Time
 }
 
 // NewSignedObtainer constructs SignedObtainer.
-func NewSignedObtainer(publicKey *rsa.PublicKey, signatureAlgorithm jose.SignatureAlgorithm) *SignedObtainer {
+func NewSignedObtainer(publicKey *jose.JSONWebKey) *SignedObtainer {
 	return &SignedObtainer{
-		pubKey:             publicKey,
-		signatureAlgorithm: signatureAlgorithm,
-		timeNow:            time.Now,
+		pubKey:  publicKey,
+		timeNow: time.Now,
 	}
 }
 
 // PublicRSAKey gets Public RSA key used by this Obtainer.
 func (j *SignedObtainer) PublicRSAKey() rsa.PublicKey {
-	return *j.pubKey
+	return *j.pubKey.Key.(*rsa.PublicKey)
 }
 
 // PublicJWK gets Public RSA key wrapped in JSON Web Key used by this Obtainer.
 func (j *SignedObtainer) PublicJWK() jose.JSONWebKey {
-	return jose.JSONWebKey{
-		Key:   j.pubKey,
-		KeyID: "1",
-		// Use parameter value is REQUIRED for all keys in the referenced JWK Set to indicate each key's intended usage.
-		Use:       signatureJWKUse,
-		Algorithm: string(j.signatureAlgorithm),
-	}
+	return *j.pubKey
 }
 
 // FromJWS parses given JWS.
@@ -402,4 +426,10 @@ func (n *NumericDate) UnmarshalJSON(b []byte) error {
 // Time returns time.Time representation of NumericDate.
 func (n NumericDate) Time() time.Time {
 	return time.Unix(int64(n), 0)
+}
+
+func hash(str string) string {
+	h := sha256.New()
+	h.Write([]byte(str))
+	return string(h.Sum(nil))
 }
