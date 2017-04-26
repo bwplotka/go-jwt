@@ -6,8 +6,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -147,7 +150,14 @@ func NewBuilder(
 	keyAlgorithm jose.KeyAlgorithm,
 	contentAlgorithm jose.ContentEncryption,
 ) (*Builder, error) {
-	prvSigJWK := newPrvJWK(prvKey, string(signatureAlgorithm), signatureJWKUse)
+	signKeyID := hash(prvKey.PublicKey.N.Bytes()) + "-s"
+	encKeyID := hash(prvKey.PublicKey.N.Bytes()) + "-e"
+	prvSigJWK := &jose.JSONWebKey{
+		Key:       prvKey,
+		KeyID:     signKeyID,
+		Algorithm: string(signatureAlgorithm),
+		Use:       signatureJWKUse,
+	}
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: signatureAlgorithm,
@@ -164,7 +174,12 @@ func NewBuilder(
 		contentAlgorithm,
 		jose.Recipient{
 			Algorithm: keyAlgorithm,
-			Key:       newPubJWK(&prvKey.PublicKey, string(keyAlgorithm), encryptionJWKUse),
+			Key: &jose.JSONWebKey{
+				Key:       prvKey.Public(),
+				KeyID:     encKeyID,
+				Algorithm: string(keyAlgorithm),
+				Use:       encryptionJWKUse,
+			},
 		},
 		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"),
 	)
@@ -172,9 +187,19 @@ func NewBuilder(
 		return nil, fmt.Errorf("JWT Builder: Could not build encrypter. Err: %v", err)
 	}
 
+	cert, err := certFromRSA(prvKey)
+	if err != nil {
+		return nil, err
+	}
 	return &Builder{
 		SignedObtainer: NewSignedObtainer(
-			newPubJWK(&prvKey.PublicKey, string(signatureAlgorithm), signatureJWKUse),
+			&jose.JSONWebKey{
+				KeyID:     signKeyID,
+				Key:       prvKey.Public(),
+				Algorithm: string(signatureAlgorithm),
+				Use:       signatureJWKUse,
+				Certificates: []*x509.Certificate{cert},
+			},
 		),
 		prvKey:    prvKey,
 		signer:    signer,
@@ -409,32 +434,31 @@ func (n NumericDate) Time() time.Time {
 	return time.Unix(int64(n), 0)
 }
 
-func newPubJWK(key *rsa.PublicKey, algo string, use string) *jose.JSONWebKey {
-	extra := "-s"
-	if use != signatureJWKUse {
-		extra = "-e"
+func certFromRSA(key *rsa.PrivateKey) (*x509.Certificate, error) {
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate serial number: %s", err)
 	}
 
-	return &jose.JSONWebKey{
-		Use:       use,
-		KeyID:     hash(key.N.Bytes()) + extra,
-		Algorithm: algo,
-		Key:       key,
-	}
-}
+	notAfter := time.Now().Add(10 * time.Hour)
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  notAfter,
 
-func newPrvJWK(key *rsa.PrivateKey, algo string, use string) *jose.JSONWebKey {
-	extra := "-s"
-	if use != signatureJWKUse {
-		extra = "-e"
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
 	}
-	return &jose.JSONWebKey{
-		Use: use,
-		// KeyID is always hash from PublicKey.
-		KeyID:     hash(key.PublicKey.N.Bytes()) + extra,
-		Algorithm: algo,
-		Key:       key,
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		return nil, err
 	}
+	return x509.ParseCertificate(derBytes)
 }
 
 func hash(b []byte) string {

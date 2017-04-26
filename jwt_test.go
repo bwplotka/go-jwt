@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
 )
 
 func stdClaims() Claims {
@@ -214,11 +215,11 @@ func TestBuilder_JWSSerializeObtain_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	signedObtainer := NewSignedObtainer(
-		newPubJWK(
-			&b.prvKey.PublicKey,
-			string(defaultSignatureAlgorithm),
-			signatureJWKUse,
-		),
+		&jose.JSONWebKey{
+			Key:       b.prvKey.Public(),
+			Algorithm: string(defaultSignatureAlgorithm),
+			Use:       signatureJWKUse,
+		},
 	)
 
 	obtainer := signedObtainer.FromJWS(token)
@@ -263,11 +264,11 @@ func TestBuilder_JWSSerializeObtain_DifferentKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	signedObtainer := NewSignedObtainer(
-		newPubJWK(
-			&yetAnotherBuilder.prvKey.PublicKey,
-			string(defaultSignatureAlgorithm),
-			signatureJWKUse,
-		),
+		&jose.JSONWebKey{
+			Key:       yetAnotherBuilder.prvKey.Public(),
+			Algorithm: string(defaultSignatureAlgorithm),
+			Use:       signatureJWKUse,
+		},
 	)
 
 	fetched := TestPayload{}
@@ -283,16 +284,22 @@ func TestSignedObtainer_ValidJWK(t *testing.T) {
 	require.NoError(t, err)
 
 	jwk := b.PublicJWK()
+
 	assert.Equal(t, jwk.Algorithm, string(defaultSignatureAlgorithm))
 	assert.Equal(t, jwk.Use, signatureJWKUse)
-	assert.True(t, jwk.KeyID != "")
+	assert.Equal(t, hash(b.prvKey.PublicKey.N.Bytes())+"-s", jwk.KeyID)
+	assert.Len(t, jwk.Certificates, 1)
 
+	require.NoError(t, err)
 	signedObtainer := NewSignedObtainer(
-		newPubJWK(
-			&b.prvKey.PublicKey,
-			string(defaultSignatureAlgorithm),
-			signatureJWKUse,
-		),
+		&jose.JSONWebKey{
+			Key:       b.prvKey.Public(),
+			Algorithm: string(defaultSignatureAlgorithm),
+			Use:       signatureJWKUse,
+			KeyID:     hash(b.prvKey.PublicKey.N.Bytes()) + "-s",
+			// Cert have random bits so need to copy here.
+			Certificates: jwk.Certificates,
+		},
 	)
 	jwkFromObtainer := signedObtainer.PublicJWK()
 
