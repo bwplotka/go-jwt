@@ -9,12 +9,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -194,10 +194,10 @@ func NewBuilder(
 	return &Builder{
 		SignedObtainer: NewSignedObtainer(
 			&jose.JSONWebKey{
-				KeyID:     signKeyID,
-				Key:       prvKey.Public(),
-				Algorithm: string(signatureAlgorithm),
-				Use:       signatureJWKUse,
+				KeyID:        signKeyID,
+				Key:          prvKey.Public(),
+				Algorithm:    string(signatureAlgorithm),
+				Use:          signatureJWKUse,
 				Certificates: []*x509.Certificate{cert},
 			},
 		),

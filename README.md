@@ -5,6 +5,8 @@ Golang JSON Web Token builder with easy to use API for JWS and nested JWT (JWS+J
 
 It wraps and is inspired by [gopkg.in/square/go-jose.v2](https://github.com/square/go-jose/tree/v2.1.0) (especially `jwt` subpackage)
 
+NOTE: Please, make sure you get fixed version of go-jose.v2. https://github.com/square/go-jose/issues/142
+
 ## Usage:
 
 ```go
